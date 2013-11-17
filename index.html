@@ -47,9 +47,11 @@
 
       <section id="main_content">
         <h1>
-<a name="pinocchio---a-git-puppet" class="anchor" href="#pinocchio---a-git-puppet"><span class="octicon octicon-link"></span></a>Pinocchio - A git puppet.</h1>
+<a name="pinocchio---a-git-puppet" class="anchor" href="#pinocchio---a-git-puppet"><span class="octicon octicon-link"></span></a><a href="http://github.com/vic/pinocchio">Pinocchio</a> - A git puppet.</h1>
 
 <p>A minimalist tool for Git based server provisioning.</p>
+
+<p><img src="https://raw.github.com/vic/pinocchio/master/pinocchio.jpg" alt="Pinocchio"></p>
 
 <h3>
 <a name="why" class="anchor" href="#why"><span class="octicon octicon-link"></span></a>Why?</h3>
@@ -90,7 +92,7 @@ It does it by leveraging on git to know which <em>migrations</em> need to be run
 <h3>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
 
-<p>Pinocchio is just a simple git update hook, all it needs is that
+<p><a href="http://github.com/vic/pinocchio">Pinocchio</a> is just a simple git update hook, all it needs is that
 you place the contents of <code>hooks/pinocchio</code> on your remote
 repo under <code>hooks/update</code> and make it executable and you're set. </p>
 
@@ -114,7 +116,7 @@ pinocchio's update hook is enabled on the remote repo.</p>
 <p>The <code>pinocchio install</code> command can automatically setup Pinocchio for you
 on your remote server. Essentially it just checks that git is installed
 or installs it for you if it can and then creates a new git bare repo at
-the specified directory, copying the Pinocchio update hook and making it
+the specified directory, copying the <a href="http://github.com/vic/pinocchio">Pinocchio</a> update hook and making it
 executable.</p>
 
 <pre lang="shell"><code>$ pinocchio install '~/pinocchio' ubuntu@my-new-slice
@@ -126,7 +128,7 @@ executable.</p>
 <pre lang="shell"><code># install git unless you already have it on your remote server
 $ ssh ubuntu@my-new-slice 'sudo apt-get install git'
 
-# create a remote repo for pinoccio and install the update hook
+# create a remote repo for pinocchio and install the update hook
 $ cat hooks/pinocchio | ssh ubuntu@my-new-slice 'git init --bare ~/pinocchio &amp;&amp; cat -&gt; ~/pinocchio/hooks/update &amp;&amp; chmod 755 ~/pinocchio/hooks/update'
 </code></pre>
 
@@ -175,6 +177,11 @@ new migrations will be executed.</p>
 <a name="contributing" class="anchor" href="#contributing"><span class="octicon octicon-link"></span></a>Contributing</h3>
 
 <p>Feel free to contribute issues, ideas, pull-requests to <a href="http://github.com/vic/pinocchio/issues">http://github.com/vic/pinocchio/issues</a> </p>
+
+<h3>
+<a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h3>
+
+<p>MIT</p>
       </section>
 
       <footer>
