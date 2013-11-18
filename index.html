@@ -87,39 +87,30 @@ migrations but for provisioning my servers.</p>
 
 <p><a href="http://github.com/vic/pinocchio">Pinocchio</a> is just a simple git <code>update</code> hook. It works by determining which
 changes it needs to execute since the last successful update. 
-It does it by leveraging on git to know which <em>migrations</em> need to be run, and only when <em><em>all</em></em> of these pending migrations have a successful exit status the git repo is updated.</p>
+It does it by leveraging on git to know which <em>migrations</em> need to be run, 
+and only when <em><em>all</em></em> of these pending migrations have a successful exit status
+the git repo is updated.</p>
 
 <h3>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
 
-<p><a href="http://github.com/vic/pinocchio">Pinocchio</a> is just a simple git update hook, all it needs is that
-you place the contents of <code>hooks/pinocchio</code> on your remote
-repo under <code>hooks/update</code> and make it executable and you're set. </p>
-
-<p>However as you might want to avoid doing things by hand, we provide a simple
-helper script <code>bin/pinocchio</code>, you can download to your workstation and 
-just make it executable.</p>
-
-<pre lang="shell"><code>curl http://raw.github.com/vic/pinocchio/master/bin/pinocchio &gt; /usr/local/bin/pinocchio
-chmod 755 /usr/local/bin/pinocchio
-</code></pre>
+<p>To use <a href="http://github.com/vic/pinocchio">Pinocchio</a> on your remote server, all you need is for it to have
+git installed and the pinocchio's update hook configured at a bare repo.</p>
 
 <p>In the following examples we assume the remote repo is hosted at 
 <em>my-new-slice</em> with user <em>ubuntu</em> at the <em>~/pinocchio</em> directory.</p>
-
-<p>On your server's side, all you need is make sure git is installed and the
-pinocchio's update hook is enabled on the remote repo.</p>
 
 <h6>
 <a name="automated-setup-on-server" class="anchor" href="#automated-setup-on-server"><span class="octicon octicon-link"></span></a>Automated setup on server</h6>
 
 <p>The <code>pinocchio install</code> command can automatically setup Pinocchio for you
-on your remote server. Essentially it just checks that git is installed
+on your remote server. In essence it just checks that git is installed
 or installs it for you if it can and then creates a new git bare repo at
-the specified directory, copying the <a href="http://github.com/vic/pinocchio">Pinocchio</a> update hook and making it
+the specified directory, copying pinocchio's update hook and making it
 executable.</p>
 
-<pre lang="shell"><code>$ pinocchio install '~/pinocchio' ubuntu@my-new-slice
+<pre lang="shell"><code>$ git clone https://github.com/vic/pinocchio.git &amp;&amp; cd pinocchio
+$ bin/pinocchio install '~/pinocchio' ubuntu@my-new-slice
 </code></pre>
 
 <h6>
@@ -135,40 +126,97 @@ $ cat hooks/pinocchio | ssh ubuntu@my-new-slice 'git init --bare ~/pinocchio &am
 <h3>
 <a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h3>
 
-<p>You create your provisioning <em>migrations</em> under the <code>migrate/</code> directory.</p>
+<p>Clone <a href="http://github.com/vic/pinocchio">Pinocchio</a> into a local directory on your computer, and edit
+your remotes accordingly, for our previous ubuntu example it would be:</p>
 
-<pre><code>README
+<pre lang="shell"><code>$ git remote --set-url origin ubuntu@my-new-slice:~/pinocchio
+</code></pre>
+
+<p>Of course you can create as many remotes as you wish to provision with
+your repo.</p>
+
+<h6>
+<a name="creating-migration-scripts" class="anchor" href="#creating-migration-scripts"><span class="octicon octicon-link"></span></a>Creating migration scripts</h6>
+
+<p>After cloning your local pinocchio, you can create your provisioning
+<em>migrations</em> under the <code>migrate/</code> directory. </p>
+
+<pre><code>README.md
 migrate/
-        201311051200-install-nginx.sh
-        201311051205-install-rvm.sh
-etc/
-        nginx.conf
+        201311051205-install-mysql.sh
 </code></pre>
 
 <p><a href="http://github.com/vic/pinocchio">Pinocchio</a> migrations are language agnostic, they can be just shell scripts
-as well as python or ruby or whatever your server can execute. The only
-requisite is these files <em>need to be executable</em> and exit with <em>zero status</em> when successful. 
-I highly recommend to prefix the migration files with a timestamp as Pinocchio will try to run them in natural order.</p>
+as well as python or ruby scripts or whatever your server can execute. 
+The only requirement for them is <em>to be executables</em> and exit with <em>zero status</em> when successful.</p>
 
-<p>To aid with timestamps you can use the <code>pinocchio generate</code> command:</p>
+<p>I highly recommend to prefix the migration files with a timestamp as Pinocchio
+ will try to run them in natural order.
+To aid with timestamps you can use the <code>pinocchio generate</code> command:</p>
 
-<pre lang="shell"><code>$ pinocchio generate install-rvm.sh
-  Generated migrate/201311051205-install-rvm.sh
+<pre lang="shell"><code>$ bin/pinocchio generate install-mysql.sh
+  Generated migrate/201311051205-install-mysql.sh
 </code></pre>
 
-<p>The etc directory is not even required, you can place all other files
-wherever you want, and simply use them inside the migration files. 
-In this example the nginx installation shell script could perform something like:
-<code>sudo cp ./etc/nginx.conf /opt/nginx</code></p>
+<h6>
+<a name="configuration-files" class="anchor" href="#configuration-files"><span class="octicon octicon-link"></span></a>Configuration files</h6>
 
-<p>After your migrations are ready, you can just push to your remote server and
-see pending migrations run.</p>
+<p><a href="http://github.com/vic/pinocchio">Pinocchio</a> provides a <code>files/</code> directory where you can place any
+file that will be copied into your servers filesystem whenever it changes.</p>
 
-<pre lang="shell"><code>$ git push
-  ...
-  remote: Applying 201311051200-install-nginx.sh
-  remote: Applying 201311051205-install-rvm.sh
+<pre><code>README.md
+migrate/
+        201311051215-install-nginx.sh
+files/
+        etc/
+             nginx.conf
 </code></pre>
+
+<p>Files are copied only after the pending migrations have finished
+successfully. So for example, when the <em>install-nginx</em> migration 
+finishes, the <code>files/etc/nginx.conf</code> file gets copied into <code>/etc/nginx.conf</code>.</p>
+
+<p>Note that Pinocchio makes no attempt at creating the directory
+structure, it simply copies the files and expects the migrations
+to have already prepared everything else.</p>
+
+<h6>
+<a name="user-permissions" class="anchor" href="#user-permissions"><span class="octicon octicon-link"></span></a>User permissions</h6>
+
+<p>Sometimes you'd want the migration scripts to be executed as a
+particular user or the copied files to have some particular owner.</p>
+
+<p><a href="http://github.com/vic/pinocchio">Pinocchio</a> supports specifying user/group permissions for both
+migration scripts and copied files. You specify them with the
+<code>pinocchio user</code> and <code>pinocchio group</code> commands.</p>
+
+<pre><code>README.md
+migrate/
+        201311051230-create-rails-user.sh
+        201311051231-install-rails-rvm.sh
+files/
+      home/
+           rails/
+                 .bashrc
+</code></pre>
+
+<p>We want the migration for creating a user to be run as root, 
+and the migration to install rvm to be run as the rails user.
+We also specify the owner for the bashrc file.</p>
+
+<pre lang="shell"><code>$ bin/pinocchio user root  migrate/201311051230-create-rails-user.sh
+$ bin/pinocchio user rails migrate/201311051231-install-rails-rvm.sh
+$ bin/pinocchio user rails files/home/rails/.bashrc
+</code></pre>
+
+<h6>
+<a name="updating-your-remote-servers" class="anchor" href="#updating-your-remote-servers"><span class="octicon octicon-link"></span></a>Updating your remote servers</h6>
+
+<p><a href="http://github.com/vic/pinocchio">Pinocchio</a> lets you manage incremental changes on your server as
+a simple git repo. So, after you've written some migration scripts
+at <code>migrate/</code> or placed some configuration files under <code>files/</code> all
+you need if to simply make a <code>git push</code> and the pinocchio's update
+hook will take care of performing pending actions and updating files.</p>
 
 <p>If all migrations run successfully, the code is updated and next time only
 new migrations will be executed.</p>
@@ -179,7 +227,7 @@ new migrations will be executed.</p>
 <p>Feel free to contribute issues, ideas, pull-requests to <a href="http://github.com/vic/pinocchio/issues">http://github.com/vic/pinocchio/issues</a> </p>
 
 <h3>
-<a name="testimonies" class="anchor" href="#testimonies"><span class="octicon octicon-link"></span></a>Testimonies</h3>
+<a name="testimonials" class="anchor" href="#testimonials"><span class="octicon octicon-link"></span></a>Testimonials</h3>
 
 <blockquote>
 <p>Just another puppet who loves using this simple tool to improve their infrastructure and development process:</p>
