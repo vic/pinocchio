@@ -46,12 +46,14 @@ patterns=`cfg --get-regex 'pinocchio\..*\.do' | sed -e 's/^pinocchio\.//' | sed 
 
 for file in $files; do
   subsection=''
-  cfg --get "pinocchio.$file.do" 1>/dev/null && subsection=$file
+  action='do'
+  cfg --get "pinocchio.$file.$action" 1>/dev/null && subsection=$file
   sha1=`git ls-tree -l $newrev $file | cut -d' ' -f3`
+  [ -z "$sha1" ] && action='rm'
   grep $sha1 $pinocchio_applied 1>&2>/dev/null 
   if [ ! $? -eq 0 ]; then
     for pattern in $patterns; do
-      [[ $file == $pattern ]] && cfg --get "pinocchio.$pattern.do" >/dev/null && subsection=$pattern && break
+      [[ $file == $pattern ]] && cfg --get "pinocchio.$pattern.$action" >/dev/null && subsection=$pattern && break
     done
   fi 
   if [ ! -z "$subsection" ]; then
@@ -71,7 +73,7 @@ for file in $files; do
     opt () { \
       cfg "pinocchio.$subsection.\$1" ;\
     } ;\
-    $( cfg --get-all pinocchio.$subsection.do)
+    $( cfg --get-all pinocchio.$subsection.$action )
 EOF
     echo $sha1 >> $pinocchio_applied
   fi
