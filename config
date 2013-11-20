@@ -79,7 +79,8 @@
 # Monit config files under the `copy` directory just get created
 ;[pinocchio "copy/etc/monit.d/*"]
 ;  do = sudo mkdir -p /etc/monit.d
-;  do = sudo cp $file /$file
+;  do = sudo cp $file /${file/copy/}
+;  rm = sudo rm /${file/copy/}
 
 # An nginx configuration generated from a ruby template
 ;[pinocchio "nginx/site.conf.erb"]
@@ -88,6 +89,8 @@
 ;  do = sudo mv /tmp/nginx-site.conf /etc/nginx/sites-available/$(opt app).conf
 ;  do = sudo ln -sf /etc/nginx/sites-available/$(opt app).conf /etc/nginx/sites-enabled/
 ;  do = sudo service nginx restart
+;  rm = sudo rm /etc/nginx/sites-enabled/$(opt app).conf
+;  rm = sudo service nginx restart
 
 # Invoke make, rake or whatever
 ;[pinocchio "assets/examples/*.png"]
