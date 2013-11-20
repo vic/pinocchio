@@ -1,0 +1,82 @@
+#!/bin/bash
+
+refname="$1"
+oldrev="$2"
+newrev="$3"
+
+# --- Safety check
+if [ -z "$GIT_DIR" ]; then
+  echo "Don't run this script from the command line." >&2
+  echo " (if you want, you could supply GIT_DIR then run" >&2
+  echo "  $0 <ref> <oldrev> <newrev>)" >&2
+  exit 1
+fi
+
+if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
+  echo "usage: $0 <ref> <oldrev> <newrev>" >&2
+  exit 1
+fi
+
+if [ $newrev == 0000* ]; then
+  # deleting branch, nothing to do
+  exit 0
+fi
+
+if [ "x$GIT_DIR" == "x." ]; then
+  GIT_DIR=$PWD
+fi
+
+git archive --format=tar --prefix=pinocchio/ $newrev | tar -x
+PINOCCHIO=$PWD/pinocchio
+pinocchio_applied=$PWD/pinocchio.applied
+touch $pinocchio_applied
+PINOCCHIO_CONFIG=${PINOCCHIO_CONFIG:-config}
+
+cfg() {
+  git config --file $PINOCCHIO/$PINOCCHIO_CONFIG $* 2>/dev/null
+}
+
+if [ $oldrev == 0000* ]; then
+  files=`git ls-tree -r --name-only $newrev | sort`
+else
+  files=`git diff --name-only $newrev $oldrev | sort`
+fi
+
+patterns=`cfg --get-regex 'pinocchio\..*\.do' | sed -e 's/^pinocchio\.//' | sed -e 's/\.do .*$//' | sed -n '1!G;h;$p'`
+
+for file in $files; do
+  subsection=''
+  cfg --get "pinocchio.$file.do" 1>/dev/null && subsection=$file
+  sha1=`git ls-tree -l $newrev $file | cut -d' ' -f3`
+  grep $sha1 $pinocchio_applied 1>&2>/dev/null 
+  if [ ! $? -eq 0 ]; then
+    for pattern in $patterns; do
+      [[ $file == $pattern ]] && cfg --get "pinocchio.$pattern.do" >/dev/null && subsection=$pattern && break
+    done
+  fi 
+  if [ ! -z "$subsection" ]; then
+    cd $PINOCCHIO
+    if [ "$file" == "$subsection" ]; then
+      echo "[pinocchio \"$subsection\"]"
+    else
+      echo "[pinocchio \"$subsection\"] ($file) "
+    fi
+    cat <<EOF | bash || exit $?
+    file="$file" ;\
+    sha1="$sha1" ;\
+    subsection="$subsection" ;\
+    cfg () { \
+      git config --file $PINOCCHIO/$PINOCCHIO_CONFIG \$* 2>/dev/null ;\
+    } ;\
+    opt () { \
+      cfg "pinocchio.$subsection.\$1" ;\
+    } ;\
+    $( cfg --get-all pinocchio.$subsection.do)
+EOF
+    echo $sha1 >> $pinocchio_applied
+  fi
+done
+
+rm $pinocchio_applied
+rm -rf $PINOCCHIO
+exit 0

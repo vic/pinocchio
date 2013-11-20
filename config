@@ -1,0 +1,99 @@
+###
+#
+# Pinocchio configuration file
+#
+#
+# When you push your repo to a remote server, the Pinocchio update hook first
+# asks git for a list of filenames which have changed since the last update.
+#
+# Keep in mind that Pinocchio sorts (by natural order) this filename list, so
+# that order of command execution is predictable. This means you should always
+# keep your migration files ordered, most likely prefixed with a timestamp or
+# serial integer number, for example:
+# 
+#  migrate/
+#
+#       000-system/
+#          20101000-apt-update.sh
+#          20101010-locale-config.sh
+#
+#       010-nginx/               
+#          20101012-install.sh 
+#          20101030-setup-available-site.sh
+#
+#       011-rails/
+#          20101004-create-user.sh
+#          20101019-install-rvm.sh
+#          20101020-apt-rvm-dependencies.sh
+#
+# Pinocchio will only execute commands for the files that have changed since
+# the last update. And the new code will be accepted only if all of these 
+# commands finish without errors. This way if something goes wrong all you
+# have to do is fix your migration and push again for Pinocchio to try again.
+#
+#
+# When a file in the repo changes, Pinocchio uses the file path to search for a
+# subsection matching the filename (first exact then as a file pattern). When a
+# matching subsection is found, the value of it's `do` key is evaled in the
+# pinocchio's update hook context.
+# Commands have access to the following variables and functions:
+#
+#   $file - The path of the file in repo which was changed
+#
+#   $subsection - The pinocchio.* subsection name
+#
+#   cfg   - Function for accessing this global configuration values
+#           It's essentially a wrapper around git config --file [this_file_path]
+#
+#           Use it for accessing variables global to the whole system, like
+#           settings that can be read by any migration or configuration file.
+#           usage: $(cfg rails.user)
+#
+#   opt   - Function for accessing the mathing subsection values.
+#           Helpful for getting non-global variables available for commands
+#           on the matching subsection.
+#           usage: $(opt user) 
+###
+
+
+# You can place any custom section with values that can be used by any
+# command, so for example to read the deployment path used in this server
+# you could use: $(cfg deploy.path) 
+#
+;[deploy]
+;  user = deploy
+;  path = /var/web/my-app 
+;  host = example.org
+
+
+# Order of pinocchio.* subsections is important in this file, having the most 
+# generic first and more specific at the end. If a changed filename has its own
+# subsection it will be used, otherwise the last subsection with a file pattern
+# that matches the changed filename will be used.
+#
+# Remember that Pinocchio is very dumb, all it does is execute the command you
+# specify for a filename when it gets changed. That way it's really up to you
+# to decide which action to perform. You can specify as many actions as you need
+
+
+# Monit config files under the `copy` directory just get created
+;[pinocchio "copy/etc/monit.d/*"]
+;  do = sudo mkdir -p /etc/monit.d
+;  do = sudo cp $file /$file
+
+# An nginx configuration generated from a ruby template
+;[pinocchio "nginx/site.conf.erb"]
+;  app = example-app
+;  do = sudo -u rails -i '~rails/.rvm/bin/erb $file > /tmp/nginx-site.conf'
+;  do = sudo mv /tmp/nginx-site.conf /etc/nginx/sites-available/$(opt app).conf
+;  do = sudo ln -sf /etc/nginx/sites-available/$(opt app).conf /etc/nginx/sites-enabled/
+;  do = sudo service nginx restart
+
+# Invoke make, rake or whatever
+;[pinocchio "assets/examples/*.png"]
+;  do = cp $file /home/nerds/code
+;  do = make -C /home/nerds/code ${file}_thumbnail.png
+
+# Just execute files when they change
+[pinocchio "migrate/*"]
+  do = $file
