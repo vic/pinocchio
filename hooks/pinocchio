@@ -17,7 +17,7 @@ if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
   exit 1
 fi
 
-if [ $newrev == 0000* ]; then
+if [[ $newrev == 0000* ]]; then
   # deleting branch, nothing to do
   exit 0
 fi
@@ -36,7 +36,7 @@ cfg() {
   git config --file $PINOCCHIO/$PINOCCHIO_CONFIG $* 2>/dev/null
 }
 
-if [ $oldrev == 0000* ]; then
+if [[ $oldrev == 0000* ]]; then
   files=`git ls-tree -r --name-only $newrev | sort`
 else
   files=`git diff --name-only $newrev $oldrev | sort`
