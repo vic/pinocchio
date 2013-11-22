@@ -45,11 +45,12 @@ fi
 patterns=`cfg --get-regex 'pinocchio\..*\.do' | sed -e 's/^pinocchio\.//' | sed -e 's/\.do .*$//' | sed -n '1!G;h;$p'`
 
 for file in $files; do
+  cd $GIT_DIR
   subsection=''
   action='do'
+  [ ! -f "$PINOCCHIO/$file" ] && action='rm'
   cfg --get "pinocchio.$file.$action" 1>/dev/null && subsection=$file
   sha1=`git ls-tree -l $newrev $file | cut -d' ' -f3`
-  [ ! -f "$PINOCCHIO/$file" ] && action='rm'
   grep $sha1 $pinocchio_applied 1>&2>/dev/null 
   if [ ! $? -eq 0 ]; then
     for pattern in $patterns; do
